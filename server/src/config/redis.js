@@ -18,7 +18,14 @@ const clients = [
 
 clients.forEach(({ name, client }) => {
   client.on('connect', () => logger.info(`Redis client ${name} connected`));
-  client.on('error', (err) => logger.error(`Redis client ${name} error:`, err));
+  
+  // We silence the repetitive connection refused errors so they don't spam the deployment logs
+  // and hide the actual fatal errors (like MongoDB connection failures).
+  client.on('error', (err) => {
+    if (err.code !== 'ECONNREFUSED') {
+      logger.error(`Redis client ${name} error:`, err);
+    }
+  });
 });
 
 async function closeAllRedis() {
