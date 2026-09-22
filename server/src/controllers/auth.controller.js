@@ -177,7 +177,8 @@ exports.logout = async (req, res, next) => {
     if (jti && exp) {
       const ttl = exp - Math.floor(Date.now() / 1000);
       if (ttl > 0) {
-        await blocklistClient.setex(`blocklist:${jti}`, ttl, 'true');
+        // blocklistClient already applies 'blocklist:' prefix internally
+        await blocklistClient.setex(jti, ttl, 'true').catch(e => logger.error('Failed to blocklist token', e));
       }
     }
 

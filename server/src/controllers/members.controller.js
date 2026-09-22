@@ -46,6 +46,9 @@ exports.updateRole = async (req, res, next) => {
       throw new AppError(404, 'Member not found');
     }
 
+    // Force role reload on next request by blocklisting current tokens
+    await blocklistClient.setex(`role-changed:${req.params.userId}`, 15 * 60, 'true').catch(() => {});
+
     res.status(200).json({ message: 'Role updated', member });
   } catch (error) {
     next(error);

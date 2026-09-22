@@ -24,9 +24,14 @@ const authenticate = async (req, res, next) => {
         if (blocklistClient.status !== 'ready') {
           logger.warn('Redis blocklist unavailable, failing open for auth check');
         } else {
-          const isBlocklisted = await blocklistClient.get(decoded.jti);
-          if (isBlocklisted) {
-            return res.status(401).json({ error: 'Authentication required' });
+          // Check jti blocklist, user deactivation, and role changes in one pipeline
+          const results = await blocklistClient.mget(
+            decoded.jti, 
+            `user-deactivated:${decoded.id}`, 
+            `role-changed:${decoded.id}`
+          );
+          if (results.some(res => res !== null)) {
+            return res.status(401).json({ error: 'Authentication required or session revoked' });
           }
         }
       } catch (err) {
@@ -40,6 +45,8 @@ const authenticate = async (req, res, next) => {
       email: decoded.email,
       role: decoded.role,
       tenantId: decoded.tenantId,
+      jti: decoded.jti,
+      exp: decoded.exp,
     };
     req.tenantId = decoded.tenantId;
 
