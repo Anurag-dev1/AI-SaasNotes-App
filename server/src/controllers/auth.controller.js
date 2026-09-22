@@ -96,6 +96,10 @@ exports.login = async (req, res, next) => {
       throw new AppError(401, 'Invalid credentials');
     }
 
+    if (env.REQUIRE_EMAIL_VERIFICATION === 'true' && !user.emailVerified) {
+      throw new AppError(403, 'Please verify your email first');
+    }
+
     const { accessToken, refreshToken, familyId } = generateTokens(user);
     
     await userRepository.updateRefreshTokenFamily(user._id, familyId);
@@ -133,6 +137,10 @@ exports.refresh = async (req, res, next) => {
 
     if (!user || user.status !== 'active') {
       throw new AppError(401, 'Invalid session');
+    }
+
+    if (env.REQUIRE_EMAIL_VERIFICATION === 'true' && !user.emailVerified) {
+      throw new AppError(403, 'Please verify your email first');
     }
 
     if (user.refreshTokenFamily !== decoded.familyId) {

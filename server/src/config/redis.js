@@ -19,12 +19,14 @@ const clients = [
 clients.forEach(({ name, client }) => {
   client.on('connect', () => logger.info(`Redis client ${name} connected`));
   
-  // We silence the repetitive connection refused errors so they don't spam the deployment logs
-  // and hide the actual fatal errors (like MongoDB connection failures).
+  const startupTime = Date.now();
   client.on('error', (err) => {
-    if (err.code !== 'ECONNREFUSED') {
-      logger.error(`Redis client ${name} error:`, err);
+    // Silence ECONNREFUSED only during the first 60 seconds (startup)
+    // to prevent log spam when testing locally/free tier, but allow real production errors through.
+    if (err.code === 'ECONNREFUSED' && (Date.now() - startupTime < 60000)) {
+      return;
     }
+    logger.error(`Redis client ${name} error:`, err);
   });
 });
 

@@ -30,8 +30,14 @@ const authenticate = async (req, res, next) => {
             `user-deactivated:${decoded.id}`, 
             `role-changed:${decoded.id}`
           );
-          if (results.some(res => res !== null)) {
+          
+          if (results[0] !== null || results[1] !== null) {
             return res.status(401).json({ error: 'Authentication required or session revoked' });
+          }
+
+          const roleChangedTimestamp = results[2];
+          if (roleChangedTimestamp && (decoded.iat * 1000) < Number(roleChangedTimestamp)) {
+            return res.status(401).json({ error: 'Role updated. Please log in again.' });
           }
         }
       } catch (err) {
