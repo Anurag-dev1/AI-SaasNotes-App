@@ -96,10 +96,6 @@ exports.login = async (req, res, next) => {
       throw new AppError(401, 'Invalid credentials');
     }
 
-    if (!user.emailVerified) {
-      throw new AppError(403, 'Please verify your email first');
-    }
-
     const { accessToken, refreshToken, familyId } = generateTokens(user);
     
     await userRepository.updateRefreshTokenFamily(user._id, familyId);
