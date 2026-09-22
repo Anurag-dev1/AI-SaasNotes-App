@@ -10,7 +10,7 @@ const app = express();
 app.use(helmet());
 
 const corsOptions = {
-  origin: env.NODE_ENV === 'production' ? 'https://yourdomain.com' : '*',
+  origin: env.NODE_ENV === 'production' ? (env.CORS_ORIGIN || 'https://yourdomain.com') : 'http://localhost:5173',
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -26,6 +26,11 @@ try {
   logger.warn('Routes module not found, skipping route mounting');
 }
 
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
 // Serve frontend in production
 const path = require('path');
 if (env.NODE_ENV === 'production') {
@@ -37,11 +42,6 @@ if (env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
 }
-
-// 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'Not Found' });
-});
 
 // Global error handler (Assuming middleware exists or will be created)
 try {

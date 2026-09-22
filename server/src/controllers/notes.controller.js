@@ -50,7 +50,7 @@ exports.getById = async (req, res, next) => {
     if (cachedNote) {
       // IDOR Fix: Enforce ownership check even on cache hits
       if (req.user.role !== 'Admin' && String(cachedNote.ownerId) !== String(req.user.id)) {
-        throw new AppError(403, 'You do not have permission to view this note');
+        throw new AppError(404, 'Note not found');
       }
       return res.status(200).json({ note: cachedNote });
     }

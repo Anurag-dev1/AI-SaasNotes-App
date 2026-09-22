@@ -20,7 +20,7 @@ const generateTokens = (user) => {
     { expiresIn: '15m', jwtid: jti }
   );
 
-  const familyId = user.refreshTokenFamily || uuidv4();
+  const familyId = uuidv4(); // Generate a new ID on every rotation
   const refreshToken = jwt.sign(
     { id: user._id, tenantId: user.tenantId, familyId },
     env.JWT_REFRESH_SECRET,
