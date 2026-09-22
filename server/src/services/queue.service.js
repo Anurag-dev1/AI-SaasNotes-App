@@ -4,42 +4,12 @@ const logger = require('../config/logger');
 
 const aiQueue = new Queue('ai-jobs', { connection: queueClient });
 
-async function fallbackProcessAiJob(tenantId, noteId, content) {
-  try {
-    const aiService = require('./ai.service');
-    const NoteRepository = require('../repositories/note.repository');
-    const repo = new NoteRepository(tenantId);
-    
-    // Simulate some delay for processing status (optional)
-    await repo.updateById(noteId, { aiStatus: 'processing' });
-    
-    const summary = await aiService.summarize(content);
-    const embedding = await aiService.generateEmbedding(content);
-    
-    await repo.updateById(noteId, {
-      aiStatus: 'completed',
-      aiSummary: summary,
-      embedding: embedding
-    });
-    
-    const cacheService = require('./cache.service');
-    await cacheService.invalidateNote(tenantId, noteId);
-  } catch (error) {
-    logger.error(`Fallback AI processing failed: ${error.message}`);
-    const NoteRepository = require('../repositories/note.repository');
-    const repo = new NoteRepository(tenantId);
-    await repo.updateById(noteId, { aiStatus: 'failed' }).catch(() => {});
-  }
-}
-
 exports.enqueueAiJob = async (tenantId, noteId, content) => {
   const jobId = `ai:${noteId}:${Date.now()}`;
   
   if (queueClient.status !== 'ready') {
-    logger.warn('Redis queue offline, executing inline fallback for AI job');
-    // Run asynchronously without blocking
-    fallbackProcessAiJob(tenantId, noteId, content).catch(err => logger.error(err));
-    return `dummy-job-id-${Date.now()}`;
+    logger.error('Redis queue offline, failing closed for AI job');
+    throw new Error('Queue service unavailable');
   }
 
   try {

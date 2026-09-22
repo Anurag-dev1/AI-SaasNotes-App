@@ -21,8 +21,8 @@ exports.checkAndIncrement = async (tenantId) => {
     };
   } catch (err) {
     logger.error(`Quota check error: ${err.message}`);
-    // Fail open if Redis is down
-    return { allowed: true, remaining: 1, limit: env.AI_TENANT_HOURLY_QUOTA || 100 };
+    // Fail closed if Redis is down
+    return { allowed: false, remaining: 0, limit: env.AI_TENANT_HOURLY_QUOTA || 100, error: 'Quota service unavailable' };
   }
 };
 

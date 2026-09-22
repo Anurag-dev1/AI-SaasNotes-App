@@ -35,13 +35,17 @@ exports.register = async (req, res, next) => {
     const { email, password, name, tenantName } = req.body;
     const slug = tenantName.toLowerCase().replace(/\s+/g, '-');
     
-    // Check if user already exists
+    // Globally check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // Prevent enumeration by returning the same success message
+      return res.status(200).json({ message: 'If this email is not already registered, a verification email has been sent.' });
+    }
+
+    // Check if tenant slug is already taken
     const existingTenant = await Tenant.findOne({ slug });
     if (existingTenant) {
-      const existingUser = await User.findOne({ email, tenantId: existingTenant._id });
-      if (existingUser) {
-        return res.status(200).json({ message: 'If this email is not already registered, a verification email has been sent.' });
-      }
+      return res.status(400).json({ error: 'Workspace name is already taken' });
     }
 
     const tenant = new Tenant({ name: tenantName, slug });

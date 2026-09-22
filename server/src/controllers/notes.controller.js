@@ -28,6 +28,9 @@ exports.list = async (req, res, next) => {
 exports.create = async (req, res, next) => {
   try {
     const quota = await quotaService.checkAndIncrement(req.tenantId);
+    if (quota.error) {
+      throw new AppError(503, 'AI Quota service temporarily unavailable');
+    }
     if (!quota.allowed) {
       throw new AppError(429, 'AI quota exceeded for this hour');
     }

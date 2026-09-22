@@ -22,27 +22,29 @@ const authenticate = async (req, res, next) => {
     if (decoded.jti) {
       try {
         if (blocklistClient.status !== 'ready') {
-          logger.warn('Redis blocklist unavailable, failing open for auth check');
-        } else {
-          // Check jti blocklist, user deactivation, and role changes in one pipeline
-          const results = await blocklistClient.mget(
-            decoded.jti, 
-            `user-deactivated:${decoded.id}`, 
-            `role-changed:${decoded.id}`
-          );
-          
-          if (results[0] !== null || results[1] !== null) {
-            return res.status(401).json({ error: 'Authentication required or session revoked' });
-          }
+          logger.error('Redis blocklist unavailable, failing closed for auth check');
+          return res.status(503).json({ error: 'Auth service temporarily unavailable' });
+        }
+        
+        // Check jti blocklist, user deactivation, and role changes in one pipeline
+        const results = await blocklistClient.mget(
+          decoded.jti, 
+          `user-deactivated:${decoded.id}`, 
+          `role-changed:${decoded.id}`
+        );
+        
+        if (results[0] !== null || results[1] !== null) {
+          return res.status(401).json({ error: 'Authentication required or session revoked' });
+        }
 
-          const roleChangedTimestamp = results[2];
-          if (roleChangedTimestamp && (decoded.iat * 1000) < Number(roleChangedTimestamp)) {
-            return res.status(401).json({ error: 'Role updated. Please log in again.' });
-          }
+        const roleChangedTimestamp = results[2];
+        if (roleChangedTimestamp && (decoded.iat * 1000) < Number(roleChangedTimestamp)) {
+          return res.status(401).json({ error: 'Role updated. Please log in again.' });
         }
       } catch (err) {
         logger.error(`Redis blocklist check failed: ${err.message}`);
-        // fail open for local dev without redis
+        // Fail closed on error to ensure security
+        return res.status(503).json({ error: 'Auth service temporarily unavailable' });
       }
     }
 
