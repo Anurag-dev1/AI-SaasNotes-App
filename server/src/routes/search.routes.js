@@ -7,7 +7,7 @@ const { csrfProtection } = require('../middleware/csrf');
 const { aiRateLimit } = require('../middleware/rate-limit');
 const { keywordSearchSchema, semanticSearchSchema } = require('../schemas/search.schema');
 
-router.get('/', authenticate, aiRateLimit, validate(keywordSearchSchema, 'query'), searchController.keywordSearch);
+router.get('/', authenticate, validate(keywordSearchSchema, 'query'), searchController.keywordSearch);
 router.post('/semantic', authenticate, aiRateLimit, csrfProtection, validate(semanticSearchSchema), searchController.semanticSearch);
 
 module.exports = router;

@@ -2,13 +2,17 @@ const { z } = require('zod');
 
 const createNoteSchema = z.object({
   title: z.string().min(1).max(200),
-  content: z.string().min(1).max(16384),
+  content: z.string().min(1).refine(val => Buffer.byteLength(val, 'utf8') <= 16384, {
+    message: 'Content must not exceed 16384 bytes'
+  }),
   tags: z.array(z.string().max(50)).max(10).optional().default([])
 });
 
 const updateNoteSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  content: z.string().min(1).max(16384).optional(),
+  content: z.string().min(1).refine(val => Buffer.byteLength(val, 'utf8') <= 16384, {
+    message: 'Content must not exceed 16384 bytes'
+  }).optional(),
   tags: z.array(z.string().max(50)).max(10).optional()
 });
 

@@ -111,38 +111,33 @@ class NoteRepository {
     const mongoose = require('mongoose');
     const tenantObjectId = new mongoose.Types.ObjectId(this.tenantId);
     
-    // Fallback: Perform local cosine similarity calculation
-    // Standard local MongoDB Community Edition does not support $vectorSearch (requires Atlas).
-    const notes = await Note.find({ tenantId: tenantObjectId, embedding: { $exists: true, $type: 'array', $ne: [] } })
-      .select('title content aiSummary createdAt embedding')
-      .lean();
-      
-    function cosineSimilarity(vecA, vecB) {
-      if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
-      let dotProduct = 0, normA = 0, normB = 0;
-      for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
+    // True MongoDB Atlas $vectorSearch with tenant isolation pre-filter
+    const results = await Note.aggregate([
+      {
+        $vectorSearch: {
+          index: 'vector_index', // Requires Atlas Search index to be created
+          path: 'embedding',
+          queryVector: queryVector,
+          numCandidates: limit * 10,
+          limit: limit,
+          filter: { tenantId: tenantObjectId }
+        }
+      },
+      {
+        $project: {
+          title: 1,
+          content: 1,
+          aiSummary: 1,
+          createdAt: 1,
+          score: { $meta: 'vectorSearchScore' }
+        }
+      },
+      {
+        $match: {
+          score: { $gte: minScore }
+        }
       }
-      if (normA === 0 || normB === 0) return 0;
-      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
-    
-    const results = notes.map(note => {
-      const score = cosineSimilarity(queryVector, note.embedding);
-      return {
-        _id: note._id,
-        title: note.title,
-        snippet: (note.content || '').substring(0, 200),
-        aiSummary: note.aiSummary,
-        createdAt: note.createdAt,
-        score
-      };
-    })
-    .filter(n => n.score >= minScore)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    ]);
     
     return results;
   }
