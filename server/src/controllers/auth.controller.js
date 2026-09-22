@@ -131,11 +131,10 @@ exports.refresh = async (req, res, next) => {
     const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
 
-    if (!user || user.status !== 'active' || !user.emailVerified) {
+    if (!user || user.status !== 'active') {
       throw new AppError(401, 'Invalid session');
     }
 
-    // Replay attack detection
     if (user.refreshTokenFamily !== decoded.familyId) {
       await userRepository.updateRefreshTokenFamily(user._id, null);
       throw new AppError(401, 'Session compromised. Please login again.');
