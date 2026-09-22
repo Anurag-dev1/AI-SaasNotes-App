@@ -5,7 +5,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MONGODB_URI: z.string().url(),
-  REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).default('false'),
+  REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).default('true'),
   CORS_ORIGIN: z.string().url().optional(),
   REDIS_CACHE_URL: z.string().url(),
   REDIS_DURABLE_URL: z.string().url(),
